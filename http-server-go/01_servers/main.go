@@ -3,7 +3,23 @@ package main
 import (
 	"log"
 	"net/http"
+	"sync/atomic"
 )
+
+// Struct to hold any stateful, in-memory data across requests
+type apiConfig struct {
+	fileserverHits atomic.Int32 // atomic allows to safely use value across goroutines
+}
+
+// Middleware that increments fileserverHits every time it's called
+func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
+	// http.Handler is an interface that has ServeHTTP method
+	// http.HandlerFunc is a type conversion that gives the function that method
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cfg.fileserverHits.Add(1)
+		next.ServeHTTP(w, r) // execute the original handler
+	})
+}
 
 func main() {
 	// Server configuration
