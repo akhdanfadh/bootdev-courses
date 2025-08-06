@@ -13,9 +13,9 @@ func main() {
 	// A multiplexer is responsible for routing HTTP requests to appropriate handler
 	mux := http.NewServeMux()
 
-	// A simple fileserver on current directory (./index.html)
+	// A simple fileserver on current directory (./index.html) on /app endpoint
 	fileServerHandler := http.FileServer(http.Dir(filepathRoot))
-	mux.Handle("/", fileServerHandler)
+	mux.Handle("/app/", http.StripPrefix("/app", fileServerHandler))
 
 	// A custom handler for readiness endpoint
 	mux.HandleFunc("/healthz", handlerReadiness)
