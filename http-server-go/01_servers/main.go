@@ -36,9 +36,9 @@ func main() {
 	// A simple fileserver on current directory (./index.html) on /app endpoint
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
 	// Endpoint for showing the fileserverHits
-	mux.HandleFunc("GET /api/metrics", apiCfg.handlerMetrics)
+	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 	// Endpoint to reset the fileserverHits
-	mux.HandleFunc("POST /api/reset", apiCfg.handlerReset)
+	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
 	// A custom handler for readiness endpoint
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 
@@ -61,9 +61,15 @@ func handlerReadiness(w http.ResponseWriter, _ *http.Request) {
 
 // A custom function to handle the hits endpoint
 func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Add("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Hits: %d", cfg.fileserverHits.Load())
+	htmlTemplate := `<html>
+  <body>
+    <h1>Welcome, Chirpy Admin</h1>
+    <p>Chirpy has been visited %d times!</p>
+  </body>
+</html>`
+	fmt.Fprintf(w, htmlTemplate, cfg.fileserverHits.Load())
 }
 
 // A custom function to handle resetting the fileserverHits
