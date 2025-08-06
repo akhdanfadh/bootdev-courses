@@ -18,7 +18,8 @@ func main() {
 	mux.Handle("/", fileServerHandler)
 
 	// A simple way to run HTTP server with configured parameters
-	server := http.Server{
+	// The use of pointer is to avoid accidental copies when passing between func/goroutines
+	server := &http.Server{
 		Handler: mux,
 		Addr:    ":" + port,
 	}
