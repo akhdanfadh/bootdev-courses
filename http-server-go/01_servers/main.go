@@ -37,6 +37,8 @@ func main() {
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
 	// Endpoint for showing the fileserverHits
 	mux.HandleFunc("/metrics", apiCfg.handlerMetrics)
+	// Endpoint to reset the fileserverHits
+	mux.HandleFunc("/reset", apiCfg.handlerReset)
 	// A custom handler for readiness endpoint
 	mux.HandleFunc("/healthz", handlerReadiness)
 
@@ -51,15 +53,22 @@ func main() {
 }
 
 // A custom function to handle the readiness endpoint, simply return 200 OK
-func handlerReadiness(w http.ResponseWriter, r *http.Request) {
+func handlerReadiness(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(http.StatusText(http.StatusOK))) // just return 200 OK
 }
 
 // A custom function to handle the hits endpoint
-func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "Hits: %d", cfg.fileserverHits.Load())
+}
+
+// A custom function to handle resetting the fileserverHits
+func (cfg *apiConfig) handlerReset(w http.ResponseWriter, _ *http.Request) {
+	cfg.fileserverHits.Store(0)
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Hits reset to 0"))
 }
