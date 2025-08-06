@@ -17,6 +17,9 @@ func main() {
 	fileServerHandler := http.FileServer(http.Dir(filepathRoot))
 	mux.Handle("/", fileServerHandler)
 
+	// A custom handler for readiness endpoint
+	mux.HandleFunc("/healthz", handlerReadiness)
+
 	// A simple way to run HTTP server with configured parameters
 	// The use of pointer is to avoid accidental copies when passing between func/goroutines
 	server := &http.Server{
@@ -25,4 +28,10 @@ func main() {
 	}
 	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
 	log.Fatal(server.ListenAndServe())
+}
+
+func handlerReadiness(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)                    // just return 200 OK
+	w.Write([]byte(http.StatusText(http.StatusOK))) // response body
 }
