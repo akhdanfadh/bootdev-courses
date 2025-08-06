@@ -14,9 +14,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	// A simple fileserver on current directory (./index.html) on /app endpoint
-	fileServerHandler := http.FileServer(http.Dir(filepathRoot))
-	mux.Handle("/app/", http.StripPrefix("/app", fileServerHandler))
-
+	mux.Handle("/app/", http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
 	// A custom handler for readiness endpoint
 	mux.HandleFunc("/healthz", handlerReadiness)
 
@@ -30,6 +28,7 @@ func main() {
 	log.Fatal(server.ListenAndServe())
 }
 
+// A custom function to handle the readiness endpoint, simply return 200 OK
 func handlerReadiness(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)                    // just return 200 OK
