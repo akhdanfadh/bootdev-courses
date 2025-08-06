@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"sync/atomic"
@@ -26,11 +27,16 @@ func main() {
 	const port = "8080"
 	const filepathRoot = "."
 
+	apiCfg := apiConfig{
+		fileserverHits: atomic.Int32{},
+	}
+
 	// A multiplexer is responsible for routing HTTP requests to appropriate handler
 	mux := http.NewServeMux()
-
 	// A simple fileserver on current directory (./index.html) on /app endpoint
-	mux.Handle("/app/", http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
+	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
+	// Endpoint for showing the fileserverHits
+	mux.HandleFunc("/metrics", apiCfg.handlerMetrics)
 	// A custom handler for readiness endpoint
 	mux.HandleFunc("/healthz", handlerReadiness)
 
@@ -47,6 +53,13 @@ func main() {
 // A custom function to handle the readiness endpoint, simply return 200 OK
 func handlerReadiness(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusOK)                    // just return 200 OK
-	w.Write([]byte(http.StatusText(http.StatusOK))) // response body
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(http.StatusText(http.StatusOK))) // just return 200 OK
+}
+
+// A custom function to handle the hits endpoint
+func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Hits: %d", cfg.fileserverHits.Load())
 }
