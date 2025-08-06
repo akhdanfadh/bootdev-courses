@@ -36,11 +36,11 @@ func main() {
 	// A simple fileserver on current directory (./index.html) on /app endpoint
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
 	// Endpoint for showing the fileserverHits
-	mux.HandleFunc("/metrics", apiCfg.handlerMetrics)
+	mux.HandleFunc("GET /metrics", apiCfg.handlerMetrics)
 	// Endpoint to reset the fileserverHits
-	mux.HandleFunc("/reset", apiCfg.handlerReset)
+	mux.HandleFunc("POST /reset", apiCfg.handlerReset)
 	// A custom handler for readiness endpoint
-	mux.HandleFunc("/healthz", handlerReadiness)
+	mux.HandleFunc("GET /healthz", handlerReadiness)
 
 	// A simple way to run HTTP server with configured parameters
 	// The use of pointer is to avoid accidental copies when passing between func/goroutines
