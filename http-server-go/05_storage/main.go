@@ -40,6 +40,7 @@ func main() {
 
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)             // healthcheck endpoint
 	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp) // validate chirp endpoint
+	mux.HandleFunc("POST /api/users", apiCfg.handlerAddUser)         // add users by email
 
 	// A simple way to run HTTP server with configured parameters
 	// The use of pointer is to avoid accidental copies when passing between func/goroutines
