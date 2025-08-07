@@ -28,6 +28,7 @@ func main() {
 		fileserverHits: atomic.Int32{},
 		db:             database.New(db),
 		platform:       env.Platform,
+		JwtSecret:      env.JwtSecret,
 	}
 
 	// A multiplexer is responsible for routing HTTP requests to appropriate handler
