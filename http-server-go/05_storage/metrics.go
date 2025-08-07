@@ -27,10 +27,3 @@ func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, _ *http.Request) {
 </html>`
 	fmt.Fprintf(w, htmlTemplate, cfg.fileserverHits.Load())
 }
-
-// handlerReset is a function to handle resetting the fileserverHits counter
-func (cfg *apiConfig) handlerReset(w http.ResponseWriter, _ *http.Request) {
-	cfg.fileserverHits.Store(0)
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Hits reset to 0"))
-}

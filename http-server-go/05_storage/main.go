@@ -36,7 +36,7 @@ func main() {
 	mux.Handle("/app/", appHandler) // fileserver on current directory as '/app' endpoint
 
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics) // show the fileserverHits
-	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)    // reset the fileserverHits
+	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)    // reset the fileserverHits and database
 
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)             // healthcheck endpoint
 	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp) // validate chirp endpoint
