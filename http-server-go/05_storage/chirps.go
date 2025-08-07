@@ -27,6 +27,31 @@ var bannedWordsMap = map[string]bool{
 	"fornax":    true,
 }
 
+// handlerGetChirps is an HTTP handler function to get all chirps
+func (c *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
+	// Get all chirps from database
+	chirps, err := c.db.GetChirps(r.Context())
+	if err != nil {
+		log.Println("Error getting chirps from database:", err)
+		respondJson(w, http.StatusInternalServerError, errorResponse{Error: "Internal server error"})
+		return
+	}
+
+	// Store chirps in a slice of Chirp structs
+	formattedChirps := make([]Chirp, len(chirps))
+	for i, chirp := range chirps {
+		formattedChirps[i] = Chirp{
+			ID:        chirp.ID,
+			CreatedAt: chirp.CreatedAt,
+			UpdatedAt: chirp.UpdatedAt,
+			UserID:    chirp.UserID,
+			Body:      chirp.Body,
+		}
+	}
+
+	respondJson(w, http.StatusOK, formattedChirps)
+}
+
 // handlerAddChirp is an HTTP handler function to add a chirp
 func (c *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 	// JSON structs for request and responses

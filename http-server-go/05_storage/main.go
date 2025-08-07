@@ -40,6 +40,7 @@ func main() {
 	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)    // reset the fileserverHits and database
 
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)       // healthcheck endpoint
+	mux.HandleFunc("GET /api/chirps", apiCfg.handlerGetChirps) // get all chirps
 	mux.HandleFunc("POST /api/chirps", apiCfg.handlerAddChirp) // validate chirp endpoint
 	mux.HandleFunc("POST /api/users", apiCfg.handlerAddUser)   // add users by email
 
