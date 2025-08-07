@@ -19,7 +19,9 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 
 	// Decode the request
 	request := validRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields() // Crucial to match the validRequest struct
+	if err := decoder.Decode(&request); err != nil {
 		respondJson(w, http.StatusBadRequest, errorResponse{Error: "Invalid JSON request"})
 		return
 	}
