@@ -27,6 +27,7 @@ func main() {
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{},
 		db:             database.New(db),
+		platform:       env.Platform,
 	}
 
 	// A multiplexer is responsible for routing HTTP requests to appropriate handler

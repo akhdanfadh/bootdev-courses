@@ -21,6 +21,7 @@ type envConfig struct {
 type apiConfig struct {
 	fileserverHits atomic.Int32      // atomic allows to safely use value across goroutines
 	db             *database.Queries // sqlc-generated-struct to interact with the database
+	platform       string            // environment of running application, e.g. "dev", "prod"
 }
 
 // validate checks if all required applcication configuration fields are set

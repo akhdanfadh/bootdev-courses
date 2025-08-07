@@ -9,6 +9,13 @@ import (
 // handlerReset handles the reset endpoint.
 // It resets the fileserverHits and deletes all user data from the database.
 func (c *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
+	// Only allow on "dev" platform
+	if c.platform != "dev" {
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte("Forbidden: Reset is only allowed in development environment."))
+		return
+	}
+
 	// Reset fileserverHits
 	c.fileserverHits.Store(0)
 
