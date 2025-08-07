@@ -19,6 +19,7 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+	Token     string    `json:"token,omitempty"` // show this only on login endpoint
 }
 
 // handlerLogin is an HTTP handler function to handle user login
@@ -27,6 +28,7 @@ func (c *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	type validRequest struct {
 		Password string `json:"password"`
 		Email    string `json:"email"`
+		Expires  int    `json:"expires_in_seconds"`
 	}
 
 	// Decode the request
@@ -49,6 +51,9 @@ func (c *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondJson(w, http.StatusBadRequest, errorResponse{Error: "Invalid email format"})
 		return
 	}
+	if request.Expires <= 0 || request.Expires > 3600 {
+		request.Expires = 3600 // default to 1 hour
+	}
 
 	// Get the user email from database
 	user, err := c.db.GetUserByEmail(r.Context(), request.Email)
@@ -64,12 +69,20 @@ func (c *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Create JWT
+	token, err := auth.MakeJWT(user.ID, c.JwtSecret, time.Duration(request.Expires)*time.Second)
+	if err != nil {
+		respondJson(w, http.StatusInternalServerError, errorResponse{Error: "Internal server error: failed to create JWT token"})
+		return
+	}
+
 	// If all good, return the user data
 	respondJson(w, http.StatusOK, User{
 		ID:        user.ID,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
 		Email:     user.Email,
+		Token:     token,
 	})
 }
 
