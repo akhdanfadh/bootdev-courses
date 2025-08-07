@@ -21,8 +21,9 @@ type User struct {
 	Email     string    `json:"email"`
 }
 
-func (c *apiConfig) handlerAddUser(w http.ResponseWriter, r *http.Request) {
-	// JSON structs for request and responses
+// handlerLogin is an HTTP handler function to handle user login
+func (c *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
+	// JSON structs for request
 	type validRequest struct {
 		Password string `json:"password"`
 		Email    string `json:"email"`
@@ -37,10 +38,61 @@ func (c *apiConfig) handlerAddUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate email
+	// Validate request
 	request.Email = strings.TrimSpace(request.Email)
-	if request.Email == "" {
-		respondJson(w, http.StatusBadRequest, errorResponse{Error: "Email is required"})
+	if request.Email == "" || request.Password == "" {
+		respondJson(w, http.StatusBadRequest, errorResponse{Error: "Email and Password is required"})
+		return
+	}
+	request.Email = strings.ToLower(request.Email)
+	if _, err := mail.ParseAddress(request.Email); err != nil {
+		respondJson(w, http.StatusBadRequest, errorResponse{Error: "Invalid email format"})
+		return
+	}
+
+	// Get the user email from database
+	user, err := c.db.GetUserByEmail(r.Context(), request.Email)
+	if err != nil {
+		respondJson(w, http.StatusNotFound, errorResponse{Error: "Email not found"})
+		return
+	}
+
+	// Compare the password
+	err = auth.CheckPasswordHash(request.Password, user.HashedPassword)
+	if err != nil {
+		respondJson(w, http.StatusUnauthorized, errorResponse{Error: "Incorrect email or password"})
+		return
+	}
+
+	// If all good, return the user data
+	respondJson(w, http.StatusOK, User{
+		ID:        user.ID,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+		Email:     user.Email,
+	})
+}
+
+func (c *apiConfig) handlerAddUser(w http.ResponseWriter, r *http.Request) {
+	// JSON structs for request
+	type validRequest struct {
+		Password string `json:"password"`
+		Email    string `json:"email"`
+	}
+
+	// Decode the request
+	request := validRequest{}
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields() // Crucial to match the validRequest struct
+	if err := decoder.Decode(&request); err != nil {
+		respondJson(w, http.StatusBadRequest, errorResponse{Error: "Invalid JSON request"})
+		return
+	}
+
+	// Validate request
+	request.Email = strings.TrimSpace(request.Email)
+	if request.Email == "" || request.Password == "" {
+		respondJson(w, http.StatusBadRequest, errorResponse{Error: "Email and Password is required"})
 		return
 	}
 	request.Email = strings.ToLower(request.Email)
