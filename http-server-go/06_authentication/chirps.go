@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/akhdanfadh/bootdev-courses/http-server-go/internal/auth"
 	"github.com/akhdanfadh/bootdev-courses/http-server-go/internal/database"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -83,8 +84,7 @@ func (c *apiConfig) handlerGetChirp(w http.ResponseWriter, r *http.Request) {
 func (c *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 	// JSON structs for request and responses
 	type validRequest struct {
-		UserID uuid.UUID `json:"user_id"`
-		Body   string    `json:"body"`
+		Body string `json:"body"`
 	}
 
 	// Decode the request
@@ -96,8 +96,22 @@ func (c *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get Bearer token from the request headers
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondJson(w, http.StatusUnauthorized, errorResponse{Error: "No authorization token provided"})
+		return
+	}
+
+	// Get user ID from the token
+	userID, err := auth.ValidateJWT(token, c.JwtSecret)
+	if err != nil {
+		respondJson(w, http.StatusUnauthorized, errorResponse{Error: "Unauthorized"})
+		return
+	}
+
 	// Validate and clean chirp
-	if request.UserID == uuid.Nil || request.Body == "" {
+	if request.Body == "" {
 		respondJson(w, http.StatusBadRequest, errorResponse{Error: "User ID and Body are required"})
 		return
 	}
@@ -110,7 +124,7 @@ func (c *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 
 	// Store on database
 	chirp, err := c.db.CreateChirp(r.Context(), database.CreateChirpParams{
-		UserID: request.UserID,
+		UserID: userID,
 		Body:   cleaned,
 	})
 	if err != nil {
