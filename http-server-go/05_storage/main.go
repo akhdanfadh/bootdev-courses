@@ -13,10 +13,10 @@ import (
 
 func main() {
 	// Load config from environment variables
-	cfg := loadConfig()
+	env := loadEnv()
 
 	// Open connection to database
-	db, err := sql.Open("postgres", cfg.DBUrl)
+	db, err := sql.Open("postgres", env.DBUrl)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
@@ -32,7 +32,7 @@ func main() {
 	// A multiplexer is responsible for routing HTTP requests to appropriate handler
 	mux := http.NewServeMux()
 
-	appHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(cfg.FilepathRoot))))
+	appHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(env.FilepathRoot))))
 	mux.Handle("/app/", appHandler) // fileserver on current directory as '/app' endpoint
 
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics) // show the fileserverHits
@@ -46,8 +46,8 @@ func main() {
 	// The use of pointer is to avoid accidental copies when passing between func/goroutines
 	server := &http.Server{
 		Handler: mux,
-		Addr:    ":" + cfg.Port,
+		Addr:    ":" + env.Port,
 	}
-	log.Printf("Serving files from %s on port: %s\n", cfg.FilepathRoot, cfg.Port)
+	log.Printf("Serving files from %s on port: %s\n", env.FilepathRoot, env.Port)
 	log.Fatal(server.ListenAndServe())
 }
