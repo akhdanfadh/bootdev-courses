@@ -20,6 +20,13 @@ type Chirp struct {
 	Body      string    `json:"body"`
 }
 
+// bannedWordsMap is a set of banned words (Go does not have Set as in Python)
+var bannedWordsMap = map[string]bool{
+	"kerfuffle": true,
+	"sharbert":  true,
+	"fornax":    true,
+}
+
 // handlerAddChirp is an HTTP handler function to add a chirp
 func (c *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 	// JSON structs for request and responses
@@ -77,17 +84,10 @@ func (c *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 
 // cleanChirp is a function to clean the chirp text by replacing banned words with ****
 func cleanChirp(chirp string) string {
-	// Make a set of banned words (Go does not have Set as in Python)
-	bannedWords := []string{"kerfuffle", "sharbert", "fornax"}
-	banned := make(map[string]bool)
-	for _, word := range bannedWords {
-		banned[word] = true
-	}
-
 	// Split on whitespace, change banned to ****, then join
 	words := strings.Split(chirp, " ")
 	for i, word := range words {
-		if banned[strings.ToLower(word)] {
+		if bannedWordsMap[strings.ToLower(word)] {
 			words[i] = "****"
 		}
 	}
