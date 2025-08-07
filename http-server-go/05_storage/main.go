@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -9,13 +10,15 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"github.com/akhdanfadh/bootdev-courses/http-server-go/internal/database"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
-// Struct to hold any stateful, in-memory data across requests
+// apiConfig is a struct that holds the configuration for the API
 type apiConfig struct {
-	fileserverHits atomic.Int32 // atomic allows to safely use value across goroutines
+	fileserverHits atomic.Int32      // atomic allows to safely use value across goroutines
+	db             *database.Queries // sqlc-generated-struct to interact with the database
 }
 
 // Middleware that increments fileserverHits every time it's called
@@ -34,11 +37,24 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+	dbUrl := os.Getenv("DB_URL")
 	port := os.Getenv("CHIRPY_PORT")
 	filepathRoot := os.Getenv("CHIRPY_FILE_ROOT")
 
+	// Open connection to database
+	db, err := sql.Open("postgres", dbUrl)
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
+	defer db.Close()
+	// Create database queries instance
+	dbQueries := database.New(db)
+
+	// Stateful configuration for the API
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{},
+		db:             dbQueries,
 	}
 
 	// A multiplexer is responsible for routing HTTP requests to appropriate handler
