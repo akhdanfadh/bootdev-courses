@@ -6,6 +6,11 @@ import (
 	"net/http"
 )
 
+// errorResponse is a struct to hold error messages in JSON format
+type errorResponse struct {
+	Error string `json:"error"`
+}
+
 // respondJSON is a utility function to respond with JSON data given payload
 func respondJson(w http.ResponseWriter, code int, payload any) {
 	w.Header().Set("Content-Type", "application/json")

@@ -15,9 +15,6 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 	type validResponse struct {
 		Body string `json:"cleaned_body"`
 	}
-	type errorResponse struct {
-		Error string `json:"error"`
-	}
 	const maxChirpLength = 140
 
 	// Decode the request

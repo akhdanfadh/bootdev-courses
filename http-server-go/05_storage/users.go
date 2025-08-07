@@ -24,9 +24,6 @@ func (c *apiConfig) handlerAddUser(w http.ResponseWriter, r *http.Request) {
 	type validRequest struct {
 		Email string `json:"email"`
 	}
-	type errorResponse struct {
-		Error string `json:"error"`
-	}
 
 	// Decode the request
 	request := validRequest{}
