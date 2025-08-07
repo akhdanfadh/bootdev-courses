@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"sync/atomic"
 )
 
@@ -89,7 +90,7 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 		Body string `json:"body"`
 	}
 	type validResponse struct {
-		Valid bool `json:"valid"`
+		Body string `json:"cleaned_body"`
 	}
 	type errorResponse struct {
 		Error string `json:"error"`
@@ -110,7 +111,8 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Then if everything okay
-	respondJson(w, http.StatusOK, validResponse{Valid: true})
+	cleaned := cleanChirp(request.Body)
+	respondJson(w, http.StatusOK, validResponse{Body: cleaned})
 }
 
 // respondJSON is a utility function to respond with JSON data given payload
@@ -125,4 +127,22 @@ func respondJson(w http.ResponseWriter, code int, payload any) {
 	}
 	w.WriteHeader(code)
 	w.Write(data)
+}
+
+func cleanChirp(chirp string) string {
+	// Make a set of banned words (Go does not have Set as in Python)
+	bannedWords := []string{"kerfuffle", "sharbert", "fornax"}
+	banned := make(map[string]bool)
+	for _, word := range bannedWords {
+		banned[word] = true
+	}
+
+	// Split on whitespace, change banned to ****, then join
+	words := strings.Split(chirp, " ")
+	for i, word := range words {
+		if banned[strings.ToLower(word)] {
+			words[i] = "****"
+		}
+	}
+	return strings.Join(words, " ")
 }
