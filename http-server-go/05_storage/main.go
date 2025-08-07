@@ -39,10 +39,11 @@ func main() {
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics) // show the fileserverHits
 	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)    // reset the fileserverHits and database
 
-	mux.HandleFunc("GET /api/healthz", handlerReadiness)       // healthcheck endpoint
-	mux.HandleFunc("GET /api/chirps", apiCfg.handlerGetChirps) // get all chirps
-	mux.HandleFunc("POST /api/chirps", apiCfg.handlerAddChirp) // validate chirp endpoint
-	mux.HandleFunc("POST /api/users", apiCfg.handlerAddUser)   // add users by email
+	mux.HandleFunc("GET /api/healthz", handlerReadiness)                // healthcheck endpoint
+	mux.HandleFunc("GET /api/chirps", apiCfg.handlerGetChirps)          // get all chirps
+	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerGetChirp) // get a chirps
+	mux.HandleFunc("POST /api/chirps", apiCfg.handlerAddChirp)          // validate chirp endpoint
+	mux.HandleFunc("POST /api/users", apiCfg.handlerAddUser)            // add users by email
 
 	// A simple way to run HTTP server with configured parameters
 	// The use of pointer is to avoid accidental copies when passing between func/goroutines

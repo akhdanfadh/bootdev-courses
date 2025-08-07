@@ -52,6 +52,33 @@ func (c *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	respondJson(w, http.StatusOK, formattedChirps)
 }
 
+// handlerGetChirp is an HTTP handler function to get a specific chirp by ID
+func (c *apiConfig) handlerGetChirp(w http.ResponseWriter, r *http.Request) {
+	chirpIdString := r.PathValue("chirpID") // return the wildcard value from the path
+
+	// Parse the chirp ID from the string
+	chirpID, err := uuid.Parse(chirpIdString)
+	if err != nil {
+		respondJson(w, http.StatusBadRequest, errorResponse{Error: "Invalid chirp ID"})
+		return
+	}
+
+	// Get the chirp from the database
+	chirp, err := c.db.GetChirp(r.Context(), chirpID)
+	if err != nil {
+		respondJson(w, http.StatusNotFound, errorResponse{Error: "Chirp not found"})
+		return
+	}
+
+	respondJson(w, http.StatusOK, Chirp{
+		ID:        chirp.ID,
+		CreatedAt: chirp.CreatedAt,
+		UpdatedAt: chirp.UpdatedAt,
+		UserID:    chirp.UserID,
+		Body:      chirp.Body,
+	})
+}
+
 // handlerAddChirp is an HTTP handler function to add a chirp
 func (c *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 	// JSON structs for request and responses
