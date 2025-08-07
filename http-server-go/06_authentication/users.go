@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/akhdanfadh/bootdev-courses/http-server-go/internal/auth"
+	"github.com/akhdanfadh/bootdev-courses/http-server-go/internal/database"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
@@ -22,7 +24,8 @@ type User struct {
 func (c *apiConfig) handlerAddUser(w http.ResponseWriter, r *http.Request) {
 	// JSON structs for request and responses
 	type validRequest struct {
-		Email string `json:"email"`
+		Password string `json:"password"`
+		Email    string `json:"email"`
 	}
 
 	// Decode the request
@@ -46,8 +49,18 @@ func (c *apiConfig) handlerAddUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Hash the password
+	hashedPassword, err := auth.HashPassword(request.Password)
+	if err != nil {
+		respondJson(w, http.StatusInternalServerError, errorResponse{Error: "Internal server error: failed to hash password"})
+		return
+	}
+
 	// Store on database
-	user, err := c.db.CreateUser(r.Context(), request.Email)
+	user, err := c.db.CreateUser(r.Context(), database.CreateUserParams{
+		Email:          request.Email,
+		HashedPassword: hashedPassword,
+	})
 	if err != nil {
 		// Check for duplicate, since email is unique
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
