@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 	"sync/atomic"
+
+	_ "github.com/lib/pq"
 )
 
 // Struct to hold any stateful, in-memory data across requests
