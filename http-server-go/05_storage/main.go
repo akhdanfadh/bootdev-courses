@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"sync/atomic"
 
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -27,9 +29,13 @@ func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 }
 
 func main() {
-	// Server configuration
-	const port = "8080"
-	const filepathRoot = "."
+	// Load environment variables
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+	port := os.Getenv("CHIRPY_PORT")
+	filepathRoot := os.Getenv("CHIRPY_FILE_ROOT")
 
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{},
