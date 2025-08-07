@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -41,6 +42,8 @@ func main() {
 	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
 	// A custom handler for readiness endpoint
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
+	// Endpoint to validate chirp
+	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
 
 	// A simple way to run HTTP server with configured parameters
 	// The use of pointer is to avoid accidental copies when passing between func/goroutines
@@ -77,4 +80,49 @@ func (cfg *apiConfig) handlerReset(w http.ResponseWriter, _ *http.Request) {
 	cfg.fileserverHits.Store(0)
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Hits reset to 0"))
+}
+
+// handlerValidateChirp is a function to handle validating chirp post endpoint
+func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
+	// JSON structs for request and responses
+	type validRequest struct {
+		Body string `json:"body"`
+	}
+	type validResponse struct {
+		Valid bool `json:"valid"`
+	}
+	type errorResponse struct {
+		Error string `json:"error"`
+	}
+	const maxChirpLength = 140
+
+	// Decode the request
+	request := validRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		respondJson(w, http.StatusBadRequest, errorResponse{Error: "Invalid JSON request"})
+		return
+	}
+
+	// Validate the length
+	if len(request.Body) > maxChirpLength {
+		respondJson(w, http.StatusBadRequest, errorResponse{Error: "Chirp is too long"})
+		return
+	}
+
+	// Then if everything okay
+	respondJson(w, http.StatusOK, validResponse{Valid: true})
+}
+
+// respondJSON is a utility function to respond with JSON data given payload
+func respondJson(w http.ResponseWriter, code int, payload any) {
+	w.Header().Set("Content-Type", "application/json")
+	data, err := json.Marshal(payload) // encode the payload
+	if err != nil {
+		log.Println("Error marshalling JSON:", err)
+		w.WriteHeader(500) // since encoding is server-side
+		w.Write([]byte(`{"error":"Internal server error"}`))
+		return
+	}
+	w.WriteHeader(code)
+	w.Write(data)
 }
