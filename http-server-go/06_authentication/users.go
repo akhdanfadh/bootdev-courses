@@ -23,12 +23,14 @@ type User struct {
 	RefreshToken string    `json:"refresh_token,omitempty"` // show this only on login endpoint
 }
 
+// Constants for token expiration
+const (
+	accessTokenExpires  = time.Duration(1) * time.Hour
+	refreshTokenExpires = time.Duration(24*60) * time.Hour
+)
+
 // handlerLogin is an HTTP handler function to handle user login
 func (c *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
-	// Constants for token expiration
-	const accessTokenExpires = time.Duration(1) * time.Hour
-	const refreshTokenExpires = time.Duration(24*60) * time.Hour
-
 	// JSON structs for request
 	type validRequest struct {
 		Password string `json:"password"`
@@ -97,6 +99,39 @@ func (c *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken.Token,
 	})
+}
+
+// handlerRefresh is an HTTP handler function to refresh the access token
+// The endpoint does not accept a request body, but expects the refresh token to be sent in the Authorization header
+func (c *apiConfig) handlerRefresh(w http.ResponseWriter, r *http.Request) {
+	// JSON structs for response
+	type validResponse struct {
+		Token string `json:"token"`
+	}
+
+	// Get Bearer bearer from the request headers
+	bearer, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondJson(w, http.StatusUnauthorized, errorResponse{Error: "No authorization token provided"})
+		return
+	}
+
+	// Check if refresh token is valid
+	refreshToken, err := c.db.GetRefreshTokenByToken(r.Context(), bearer)
+	if err != nil || refreshToken.ExpiresAt.Before(time.Now()) {
+		respondJson(w, http.StatusUnauthorized, errorResponse{Error: "Invalid or expired refresh token"})
+		return
+	}
+
+	// Create new access token (JWT)
+	newToken, err := auth.MakeJWT(refreshToken.UserID, c.JwtSecret, accessTokenExpires)
+	if err != nil {
+		respondJson(w, http.StatusInternalServerError, errorResponse{Error: "Internal server error: failed to create new access token"})
+		return
+	}
+
+	// If all good, return the new access token
+	respondJson(w, http.StatusOK, validResponse{Token: newToken})
 }
 
 func (c *apiConfig) handlerAddUser(w http.ResponseWriter, r *http.Request) {
