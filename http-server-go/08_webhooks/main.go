@@ -29,6 +29,7 @@ func main() {
 		db:             database.New(db),
 		platform:       env.Platform,
 		JwtSecret:      env.JwtSecret,
+		PolkaKey:       env.PolkaKey,
 	}
 
 	// A multiplexer is responsible for routing HTTP requests to appropriate handler

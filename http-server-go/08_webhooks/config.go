@@ -11,11 +11,7 @@ import (
 
 // envConfig holds the application configuration
 type envConfig struct {
-	DBUrl        string
-	Port         string
-	FilepathRoot string
-	Platform     string
-	JwtSecret    string
+	DBUrl, Port, FilepathRoot, Platform, JwtSecret, PolkaKey string
 }
 
 // apiConfig holds the stateful configuration for the API
@@ -24,6 +20,7 @@ type apiConfig struct {
 	db             *database.Queries // sqlc-generated-struct to interact with the database
 	platform       string            // environment of running application, e.g. "dev", "prod"
 	JwtSecret      string            // secret key for JWT signing
+	PolkaKey       string            // key for Polka webhook
 }
 
 // validate checks if all required applcication configuration fields are set
@@ -34,6 +31,7 @@ func (e *envConfig) validate() {
 		"CHIRPY_FILE_ROOT": e.FilepathRoot,
 		"PLATFORM":         e.Platform,
 		"JWT_SECRET":       e.JwtSecret,
+		"POLKA_KEY":        e.PolkaKey,
 	}
 
 	for envName, envValue := range envVars {
@@ -56,6 +54,7 @@ func loadEnv() *envConfig {
 		FilepathRoot: os.Getenv("CHIRPY_FILE_ROOT"),
 		Platform:     os.Getenv("PLATFORM"),
 		JwtSecret:    os.Getenv("JWT_SECRET"),
+		PolkaKey:     os.Getenv("POLKA_KEY"),
 	}
 	env.validate()
 
