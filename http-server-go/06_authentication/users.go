@@ -15,20 +15,24 @@ import (
 )
 
 type User struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
-	Token     string    `json:"token,omitempty"` // show this only on login endpoint
+	ID           uuid.UUID `json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	Email        string    `json:"email"`
+	AccessToken  string    `json:"token,omitempty"`         // show this only on login endpoint
+	RefreshToken string    `json:"refresh_token,omitempty"` // show this only on login endpoint
 }
 
 // handlerLogin is an HTTP handler function to handle user login
 func (c *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
+	// Constants for token expiration
+	const accessTokenExpires = time.Duration(1) * time.Hour
+	const refreshTokenExpires = time.Duration(24*60) * time.Hour
+
 	// JSON structs for request
 	type validRequest struct {
 		Password string `json:"password"`
 		Email    string `json:"email"`
-		Expires  int    `json:"expires_in_seconds"`
 	}
 
 	// Decode the request
@@ -51,9 +55,6 @@ func (c *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondJson(w, http.StatusBadRequest, errorResponse{Error: "Invalid email format"})
 		return
 	}
-	if request.Expires <= 0 || request.Expires > 3600 {
-		request.Expires = 3600 // default to 1 hour
-	}
 
 	// Get the user email from database
 	user, err := c.db.GetUserByEmail(r.Context(), request.Email)
@@ -69,8 +70,19 @@ func (c *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Create refresh token and store it in the database
+	refreshToken, err := c.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		Token:     auth.MakeRefreshToken(),
+		UserID:    user.ID,
+		ExpiresAt: time.Now().Add(refreshTokenExpires),
+	})
+	if err != nil {
+		respondJson(w, http.StatusInternalServerError, errorResponse{Error: "Internal server error: failed to create refresh token"})
+		return
+	}
+
 	// Create JWT
-	token, err := auth.MakeJWT(user.ID, c.JwtSecret, time.Duration(request.Expires)*time.Second)
+	accessToken, err := auth.MakeJWT(user.ID, c.JwtSecret, accessTokenExpires)
 	if err != nil {
 		respondJson(w, http.StatusInternalServerError, errorResponse{Error: "Internal server error: failed to create JWT token"})
 		return
@@ -78,11 +90,12 @@ func (c *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 
 	// If all good, return the user data
 	respondJson(w, http.StatusOK, User{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
-		Token:     token,
+		ID:           user.ID,
+		CreatedAt:    user.CreatedAt,
+		UpdatedAt:    user.UpdatedAt,
+		Email:        user.Email,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken.Token,
 	})
 }
 
