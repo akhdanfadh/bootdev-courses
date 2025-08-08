@@ -48,6 +48,7 @@ func main() {
 
 	mux.HandleFunc("POST /api/login", apiCfg.handlerLogin)     // login endpoint
 	mux.HandleFunc("POST /api/refresh", apiCfg.handlerRefresh) // create new acces token
+	mux.HandleFunc("POST /api/revoke", apiCfg.handlerRevoke)   // revoke refresh token
 	mux.HandleFunc("POST /api/users", apiCfg.handlerAddUser)   // add users by email
 
 	// A simple way to run HTTP server with configured parameters

@@ -106,7 +106,7 @@ func (c *apiConfig) handlerRefresh(w http.ResponseWriter, r *http.Request) {
 
 	// Check if refresh token is valid
 	refreshToken, err := c.db.GetRefreshTokenByToken(r.Context(), bearer)
-	if err != nil || refreshToken.ExpiresAt.Before(time.Now()) {
+	if err != nil || refreshToken.ExpiresAt.Before(time.Now()) || refreshToken.RevokedAt.Valid {
 		respondJson(w, http.StatusUnauthorized, errorResponse{Error: "Invalid or expired refresh token"})
 		return
 	}
@@ -120,4 +120,32 @@ func (c *apiConfig) handlerRefresh(w http.ResponseWriter, r *http.Request) {
 
 	// If all good, return the new access token
 	respondJson(w, http.StatusOK, validResponse{Token: newToken})
+}
+
+// handlerRevoke is an HTTP handler function to revoke the refresh token
+// The endpoint does not accept a request body, but expects the refresh token to be sent in the Authorization header
+func (c *apiConfig) handlerRevoke(w http.ResponseWriter, r *http.Request) {
+	// Get Bearer bearer from the request headers
+	bearer, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondJson(w, http.StatusUnauthorized, errorResponse{Error: "No authorization token provided"})
+		return
+	}
+
+	// Check if refresh token is valid
+	refreshToken, err := c.db.GetRefreshTokenByToken(r.Context(), bearer)
+	if err != nil || refreshToken.ExpiresAt.Before(time.Now()) || refreshToken.RevokedAt.Valid {
+		respondJson(w, http.StatusUnauthorized, errorResponse{Error: "Invalid or expired refresh token"})
+		return
+	}
+
+	// Revoke the refresh token by setting revoked_at and updated_at to now (native SQL)
+	err = c.db.RevokeRefreshToken(r.Context(), refreshToken.Token)
+	if err != nil {
+		respondJson(w, http.StatusInternalServerError, errorResponse{Error: "Internal server error: failed to revoke refresh token"})
+		return
+	}
+
+	// If all good, just return 204 with no body
+	w.WriteHeader(http.StatusNoContent)
 }
