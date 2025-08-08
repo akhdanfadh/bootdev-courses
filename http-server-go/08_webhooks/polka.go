@@ -6,19 +6,31 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/akhdanfadh/bootdev-courses/http-server-go/internal/auth"
 	"github.com/google/uuid"
 )
 
 func (c *apiConfig) handlerPolkaWebhook(w http.ResponseWriter, r *http.Request) {
-	// JSON structs for request
+	// Get and validate ApiKey from the Authorization header
+	apiKey, err := auth.GetApiKey(r.Header)
+	if err != nil {
+		log.Println("Failed to get Polka API key from request:", err)
+		w.WriteHeader(http.StatusUnauthorized) // 401
+		return
+	}
+	if apiKey != c.PolkaKey {
+		log.Println("Invalid Polka API key in request:", apiKey)
+		w.WriteHeader(http.StatusUnauthorized) // 401
+		return
+	}
+
+	// Decode the JSON request
 	type validRequest struct {
 		Event string `json:"event"`
 		Data  struct {
 			UserID string `json:"user_id"`
 		} `json:"data"`
 	}
-
-	// Decode the JSON request
 	request := validRequest{}
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields() // Crucial to match the validRequest struct

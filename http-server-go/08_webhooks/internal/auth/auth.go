@@ -14,3 +14,12 @@ func GetBearerToken(headers http.Header) (string, error) {
 	}
 	return "", fmt.Errorf("missing bearer token in Authorization header")
 }
+
+// GetApiKey extracts the API key from the Authorization header
+func GetApiKey(headers http.Header) (string, error) {
+	apiKey := headers.Get("Authorization")
+	if strings.HasPrefix(apiKey, "ApiKey ") {
+		return apiKey[7:], nil
+	}
+	return "", fmt.Errorf("missing ApiKey in Authorization header")
+}
