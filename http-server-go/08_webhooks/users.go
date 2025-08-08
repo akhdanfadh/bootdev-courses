@@ -19,6 +19,7 @@ type User struct {
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 	Email        string    `json:"email"`
+	ChirpyRed    bool      `json:"is_chirpy_red"`
 	AccessToken  string    `json:"token,omitempty"`         // show this only on login endpoint
 	RefreshToken string    `json:"refresh_token,omitempty"` // show this only on login endpoint
 }
@@ -80,6 +81,7 @@ func (c *apiConfig) handlerAddUser(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
 		Email:     user.Email,
+		ChirpyRed: user.IsChirpyRed,
 	}
 	respondJson(w, http.StatusCreated, response)
 }
@@ -157,5 +159,6 @@ func (c *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
 		Email:     user.Email,
+		ChirpyRed: user.IsChirpyRed,
 	})
 }
