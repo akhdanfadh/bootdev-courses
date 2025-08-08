@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -31,8 +32,15 @@ var bannedWordsMap = map[string]bool{
 // handlerGetChirps is an HTTP handler function to get all chirps
 func (c *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	userIDString := r.URL.Query().Get("author_id") // optional, could be empty
+	sortDirection := r.URL.Query().Get("sort")     // optional, could be empty
 	var chirps []database.Chirp
 	var err error
+
+	// Validate sort direction
+	if sortDirection != "" && sortDirection != "asc" && sortDirection != "desc" {
+		respondJson(w, http.StatusBadRequest, errorResponse{Error: "Invalid sort direction"})
+		return
+	}
 
 	// IF: Get all chirps from the database
 	if userIDString == "" {
@@ -62,6 +70,9 @@ func (c *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 
 	// Store chirps in a slice of Chirp structs
 	formattedChirps := make([]Chirp, len(chirps))
+	if sortDirection == "desc" {
+		slices.Reverse(chirps)
+	}
 	for i, chirp := range chirps {
 		formattedChirps[i] = Chirp{
 			ID:        chirp.ID,
