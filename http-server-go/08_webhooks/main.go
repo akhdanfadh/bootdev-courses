@@ -54,6 +54,8 @@ func main() {
 	mux.HandleFunc("PUT /api/users", apiCfg.handlerUpdateUser) // update user email and password
 	mux.HandleFunc("POST /api/users", apiCfg.handlerAddUser)   // add users by email
 
+	mux.HandleFunc("POST /api/polka/webhooks", apiCfg.handlerPolkaWebhook) // polka webhook handler
+
 	// A simple way to run HTTP server with configured parameters
 	// The use of pointer is to avoid accidental copies when passing between func/goroutines
 	server := &http.Server{
