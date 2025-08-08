@@ -30,12 +30,34 @@ var bannedWordsMap = map[string]bool{
 
 // handlerGetChirps is an HTTP handler function to get all chirps
 func (c *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
-	// Get all chirps from database
-	chirps, err := c.db.GetChirps(r.Context())
-	if err != nil {
-		log.Println("Error getting chirps from database:", err)
-		respondJson(w, http.StatusInternalServerError, errorResponse{Error: "Internal server error"})
-		return
+	userIDString := r.URL.Query().Get("author_id") // optional, could be empty
+	var chirps []database.Chirp
+	var err error
+
+	// IF: Get all chirps from the database
+	if userIDString == "" {
+		chirps, err = c.db.GetChirps(r.Context())
+		if err != nil {
+			log.Println("Error getting chirps from database:", err)
+			respondJson(w, http.StatusInternalServerError, errorResponse{Error: "Internal server error"})
+			return
+		}
+
+		// ELSE: Get chirps filtered by user ID
+	} else {
+		// Parse user ID from the query parameter
+		userID, err := uuid.Parse(userIDString)
+		if err != nil {
+			respondJson(w, http.StatusBadRequest, errorResponse{Error: "Invalid user ID format"})
+			return
+		}
+		// Get the chirps
+		chirps, err = c.db.GetChirpsPerUser(r.Context(), userID)
+		if err != nil {
+			log.Println("Error getting chirps from database:", err)
+			respondJson(w, http.StatusInternalServerError, errorResponse{Error: "Internal server error"})
+			return
+		}
 	}
 
 	// Store chirps in a slice of Chirp structs
