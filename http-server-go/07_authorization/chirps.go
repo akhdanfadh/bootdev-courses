@@ -148,6 +148,52 @@ func (c *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handlerDeleteChirp is an HTTP handler function to delete a chirp by ID
+func (c *apiConfig) handlerDeleteChirp(w http.ResponseWriter, r *http.Request) {
+	// Parse the chirp ID from the string
+	chirpIdString := r.PathValue("chirpID") // return the wildcard value from the path
+	chirpID, err := uuid.Parse(chirpIdString)
+	if err != nil {
+		respondJson(w, http.StatusBadRequest, errorResponse{Error: "Invalid ID format"})
+		return
+	}
+
+	// Get Bearer token from the request headers
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondJson(w, http.StatusUnauthorized, errorResponse{Error: "No access token provided"})
+		return
+	}
+	// Validate access token and get user ID
+	userID, err := auth.ValidateJWT(token, c.JwtSecret)
+	if err != nil {
+		respondJson(w, http.StatusUnauthorized, errorResponse{Error: "Unauthorized"})
+		return
+	}
+
+	// Get the chirp from the database
+	chirp, err := c.db.GetChirp(r.Context(), chirpID)
+	if err != nil {
+		respondJson(w, http.StatusNotFound, errorResponse{Error: "Chirp not found"})
+		return
+	}
+	// Validate that the chirp belongs to the user
+	if chirp.UserID != userID {
+		respondJson(w, http.StatusForbidden, errorResponse{Error: "You are not allowed to delete this chirp"})
+		return
+	}
+
+	// Delete the chirp from the database
+	err = c.db.DeleteChirpByID(r.Context(), chirpID)
+	if err != nil {
+		respondJson(w, http.StatusInternalServerError, errorResponse{Error: "Internal server error: delete chirp failed"})
+		return
+	}
+
+	// If all good, return 204
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // cleanChirp is a function to clean the chirp text by replacing banned words with ****
 func cleanChirp(chirp string) string {
 	// Split on whitespace, change banned to ****, then join

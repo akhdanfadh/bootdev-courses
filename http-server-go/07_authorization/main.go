@@ -42,9 +42,10 @@ func main() {
 
 	mux.HandleFunc("GET /api/healthz", handlerReadiness) // healthcheck endpoint
 
-	mux.HandleFunc("GET /api/chirps", apiCfg.handlerGetChirps)          // get all chirps
-	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerGetChirp) // get a chirps
-	mux.HandleFunc("POST /api/chirps", apiCfg.handlerAddChirp)          // validate chirp endpoint
+	mux.HandleFunc("GET /api/chirps", apiCfg.handlerGetChirps)                // get all chirps
+	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerGetChirp)       // get a chirps
+	mux.HandleFunc("POST /api/chirps", apiCfg.handlerAddChirp)                // add chirp
+	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.handlerDeleteChirp) // delete chirp
 
 	mux.HandleFunc("POST /api/login", apiCfg.handlerLogin)     // login endpoint
 	mux.HandleFunc("POST /api/refresh", apiCfg.handlerRefresh) // create new acces token
