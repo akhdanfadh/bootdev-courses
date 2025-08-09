@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
 	"github.com/google/uuid"
@@ -64,12 +64,19 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Save the thumbnail to a file
-	tnFileExt, ok := strings.CutPrefix(tnType, "image/")
-	if !ok {
-		respondWithError(w, http.StatusBadRequest, "Invalid thumbnail content type", nil)
+	// Only allow jpeg and png, check with mime package
+	mt, _, err := mime.ParseMediaType(tnType)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid thumbnail content type", err)
 		return
 	}
+	if mt != "image/jpeg" && mt != "image/png" {
+		respondWithError(w, http.StatusBadRequest, "Only jpeg and png thumbnails are allowed", nil)
+		return
+	}
+	tnFileExt := mt[6:]
+
+	// Save the thumbnail to a file
 	tnFileName := fmt.Sprintf("%s.%s", videoID, tnFileExt)
 	tnFilePath := filepath.Join(cfg.assetsRoot, tnFileName)
 	tnFile, err := os.Create(tnFilePath)
