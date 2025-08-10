@@ -89,13 +89,25 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusInternalServerError, "Couldn't seek to start of video file", err)
 		return
 	}
+	// - Get video aspect ratio for S3 organization
+	aspectRatio, err := getVideoAspectRatio(tempFile.Name())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't get video aspect ratio", err)
+		return
+	}
+	switch aspectRatio {
+	case "16:9":
+		aspectRatio = "landscape"
+	case "9:16":
+		aspectRatio = "portrait"
+	}
 	// - Create random name (key) for the video file
 	base := make([]byte, 32)
 	if _, err = rand.Read(base); err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't generate random file name", err)
 		return
 	}
-	objectKey := fmt.Sprintf("%s.mp4", base64.RawURLEncoding.EncodeToString(base))
+	objectKey := fmt.Sprintf("%s/%s.mp4", aspectRatio, base64.RawURLEncoding.EncodeToString(base))
 
 	// Upload the video file to S3
 	objectData := &s3.PutObjectInput{
