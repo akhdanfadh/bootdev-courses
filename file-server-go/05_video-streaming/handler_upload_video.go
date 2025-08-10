@@ -70,27 +70,36 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Save the video file
+	// Save the video file as temporary
 	tempFile, err := os.CreateTemp("", "tubely-upload.mp4")
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create temporary file", err)
 		return
 	}
 	defer os.Remove(tempFile.Name()) // Clean up temp file after upload
-	defer tempFile.Close()
+	defer tempFile.Close()           // note: defer is LIFO, so this order correct
 	if _, err = io.Copy(tempFile, vidData); err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't save video file", err)
 		return
 	}
 
-	// Prepare to upload the video file to S3
-	// - Reset the file pointer to allow reading from the start
-	if _, err = tempFile.Seek(0, io.SeekStart); err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't seek to start of video file", err)
+	// Process the video file to ensure it is suitable for fast start playback
+	fastPath, err := processVideoForFastStart(tempFile.Name())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't process video for fast start", err)
 		return
 	}
+	fastFile, err := os.Open(fastPath)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't open processed video file", err)
+		return
+	}
+	defer os.Remove(fastPath) // Clean up processed file after upload
+	defer fastFile.Close()
+
+	// Prepare to upload the video file to S3
 	// - Get video aspect ratio for S3 organization
-	aspectRatio, err := getVideoAspectRatio(tempFile.Name())
+	aspectRatio, err := getVideoAspectRatio(fastFile.Name())
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't get video aspect ratio", err)
 		return
@@ -113,7 +122,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	objectData := &s3.PutObjectInput{
 		Bucket:      aws.String(cfg.s3Bucket),
 		Key:         aws.String(objectKey),
-		Body:        tempFile,
+		Body:        fastFile,
 		ContentType: aws.String(mediaType),
 	}
 	if _, err = cfg.s3Client.PutObject(r.Context(), objectData); err != nil {

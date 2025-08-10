@@ -62,3 +62,13 @@ func getVideoAspectRatio(filePath string) (string, error) {
 		return "other", nil
 	}
 }
+
+// processVideoForFastStart processes the video file to ensure it is suitable for fast start playback
+func processVideoForFastStart(filePath string) (string, error) {
+	outputFilePath := fmt.Sprintf("%s.processing", filePath)
+	cmd := exec.Command("ffmpeg", "-i", filePath, "-c", "copy", "-movflags", "faststart", "-f", "mp4", outputFilePath)
+	if err := cmd.Run(); err != nil {
+		return "", err
+	}
+	return outputFilePath, nil
+}
