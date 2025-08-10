@@ -131,7 +131,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Update the video metadata for the video in database
-	vidUrl := fmt.Sprintf("%s,%s", cfg.s3Bucket, objectKey) // a format we use to store unsigned video URLs
+	vidUrl := fmt.Sprintf("https://%s/%s", cfg.s3CfDistribution, objectKey) // a format we use to store unsigned video URLs
 	video.VideoURL = &vidUrl
 	if err = cfg.db.UpdateVideo(video); err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't update video metadata in database", err)
