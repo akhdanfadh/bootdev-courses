@@ -1,3 +1,6 @@
 [submodule "file-server-go/starter"]
 	path = file-server-go/starter
 	url = git@github.com:bootdotdev/learn-file-storage-s3-golang-starter.git
+[submodule "ci-cd-go"]
+	path = ci-cd-go
+	url = git@github.com:akhdanfadh/bootdev-course-cicd.git
