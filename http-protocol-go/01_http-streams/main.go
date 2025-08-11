@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -15,16 +16,27 @@ func main() {
 	}
 	defer file.Close()
 
-	// Read the file 8 bytes at a time
+	var line string
+	buf := make([]byte, 8)
+
 	for {
-		buffer := make([]byte, 8)
-		if _, err := file.Read(buffer); err != nil {
+		// Read file 8 bytes at a time
+		n, err := file.Read(buf)
+		if err != nil {
 			if err == io.EOF {
-				break
+				break // end-of-file reached
 			} else {
 				log.Fatal(err)
 			}
 		}
-		fmt.Println("read:", string(buffer))
+
+		// Split buffer into lines
+		parts := strings.Split(string(buf[:n]), "\n")
+		line += parts[0]                  // directly append the first part
+		for i := 1; i < len(parts); i++ { // skip first part, process the rest if any
+			// print current line, windows crlf considered
+			fmt.Println("read:", strings.TrimSuffix(line, "\r"))
+			line = parts[i] // reset line to next part
+		}
 	}
 }
