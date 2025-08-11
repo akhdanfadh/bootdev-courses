@@ -4,27 +4,41 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
+	"net"
 	"strings"
 )
 
 func main() {
-	// Open a file for reading
-	file, err := os.Open("messages.txt")
+	const port = "42069"
+
+	// Listen a TCP connection
+	listener, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer file.Close()
+	defer listener.Close()
 
-	// Consume line from the generated channel
-	lineChan := getLinesChannel(file)
-	for line := range lineChan {
-		fmt.Println("read:", line)
+	fmt.Printf("Listening for TCP traffic on port %s...\n", port)
+	for {
+		// Wait for a connection
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("Connection has been accepted")
+
+		// Consume line from the connection
+		lineChan := getLinesChannel(conn)
+		for line := range lineChan {
+			fmt.Println(line)
+		}
+		fmt.Println("Connection has been closed")
 	}
 }
 
-// getLinesChannel reads lines from a file and returns a channel that emits each line
-func getLinesChannel(file io.ReadCloser) <-chan string {
+// getLinesChannel reads lines from io.ReadCloser interface
+// and returns a channel that emits each line
+func getLinesChannel(rc io.ReadCloser) <-chan string {
 	lineChan := make(chan string)
 	go func() {
 		defer close(lineChan) // ensure channel is closed when done
@@ -33,7 +47,7 @@ func getLinesChannel(file io.ReadCloser) <-chan string {
 		buf := make([]byte, 8)
 		for {
 			// Read file 8 bytes at a time
-			n, err := file.Read(buf)
+			n, err := rc.Read(buf)
 			if err != nil {
 				if err == io.EOF {
 					break // end-of-file reached
