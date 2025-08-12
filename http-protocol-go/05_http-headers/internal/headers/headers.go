@@ -3,6 +3,7 @@ package headers
 import (
 	"bytes"
 	"fmt"
+	"slices"
 	"strings"
 	"unicode"
 )
@@ -34,13 +35,29 @@ func (h Headers) Parse(data []byte) (int, bool, error) {
 	if key == "" {
 		return 0, false, fmt.Errorf("invalid header key: %s", newData)
 	}
-	if len(key) != len(strings.TrimRightFunc(key, unicode.IsSpace)) {
-		return 0, false, fmt.Errorf("invalid header key with whitespace: %s", newData)
+	if key != strings.TrimRightFunc(key, unicode.IsSpace) {
+		return 0, false, fmt.Errorf("invalid header key (whitespace): %s", newData)
 	}
 	key = strings.TrimSpace(key) // trim leading whitespace
+	for _, r := range key {
+		if !isValidHeaderChar(r) {
+			return 0, false, fmt.Errorf("invalid header key (characters): %s", newData)
+		}
+	}
 	// value could be empty
 	value := string(bytes.TrimSpace(newData[colonIdx+1:]))
 
-	h[key] = value // dereference pointer to access map
+	h[key] = value
 	return CLRFIdx + 2, false, nil
+}
+
+var validSymbol = []byte{'!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '^', '_', '`', '|', '~'}
+
+func isValidHeaderChar(r rune) bool {
+	if (r >= 'A' && r <= 'Z') ||
+		(r >= 'a' && r <= 'z') ||
+		(r >= '0' && r <= '9') {
+		return true
+	}
+	return slices.Contains(validSymbol, byte(r))
 }
