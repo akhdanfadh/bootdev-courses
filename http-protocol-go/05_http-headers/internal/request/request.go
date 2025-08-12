@@ -6,6 +6,8 @@ import (
 	"io"
 	"strings"
 	"unicode"
+
+	"github.com/akhdanfadh/bootdev-courses/http-protocol-go/internal/headers"
 )
 
 // Request represents an HTTP request, based on RFC 9112 Section 2.1.
@@ -13,7 +15,7 @@ type (
 	Request struct {
 		state       parseState
 		RequestLine RequestLine
-		Headers     map[string]string
+		Headers     headers.Headers
 		Body        []byte
 	}
 	RequestLine struct {
@@ -34,10 +36,12 @@ const (
 
 // RequestFromReader reads an HTTP request from the provided io.Reader.
 func RequestFromReader(reader io.Reader) (*Request, error) {
-	buffer := make([]byte, bufferSize)        // buffer to read data into
-	readToIndex := 0                          // keep track how much data we've read
-	request := &Request{state: isRequestLine} // initialize the request parse state
-
+	buffer := make([]byte, bufferSize) // buffer to read data into
+	readToIndex := 0                   // keep track how much data we've read
+	request := &Request{
+		state:   isRequestLine,        // initialize the request parse state
+		Headers: headers.NewHeaders(), // initialize headers
+	}
 	for request.state != isDone {
 		// Grow the buffer if full
 		if readToIndex >= len(buffer) {
@@ -87,13 +91,23 @@ func (r *Request) parse(data []byte) (int, error) {
 			return 0, err
 		}
 		if bytesParsed == 0 {
-			return 0, nil // not enough data to parse request line yet
-		}
+			return 0, nil
+		} // not enough data to parse request line yet
 		r.RequestLine = *requestLine
-		r.state = isDone // TODO: for now we only parse request line
+		r.state = isHeaders // move to the next state
 		return bytesParsed, nil
 	case isHeaders:
-		return 0, fmt.Errorf("parsing headers is not implemented yet")
+		bytesParsed, doneParsing, err := r.Headers.Parse(data)
+		if err != nil {
+			return 0, err
+		}
+		if bytesParsed == 0 {
+			return 0, nil
+		} // not enough data to parse headers yet
+		if doneParsing {
+			r.state = isDone
+		} // TODO: for now we only parse request line and headers
+		return bytesParsed, nil
 	case isBody:
 		return 0, fmt.Errorf("parsing body is not implemented yet")
 	default:
