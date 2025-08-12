@@ -1,6 +1,7 @@
 package request
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strings"
@@ -8,75 +9,143 @@ import (
 )
 
 // Request represents an HTTP request, based on RFC 9112 Section 2.1.
-type Request struct {
-	RequestLine RequestLine
-	Headers     map[string]string
-	Body        []byte
-}
-type RequestLine struct {
-	Method        string
-	RequestTarget string
-	HTTPVersion   string // initialism stylecheck HTTP inside Http
-}
+type (
+	Request struct {
+		state       parseState
+		RequestLine RequestLine
+		Headers     map[string]string
+		Body        []byte
+	}
+	RequestLine struct {
+		Method        string
+		RequestTarget string
+		HTTPVersion   string
+	}
+	parseState int
+)
+
+const bufferSize = 8
+const (
+	isDone parseState = iota
+	isRequestLine
+	isHeaders
+	isBody
+)
 
 // RequestFromReader reads an HTTP request from the provided io.Reader.
 func RequestFromReader(reader io.Reader) (*Request, error) {
-	// Slurp the entire request into memory
-	data, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, err
-	}
+	buffer := make([]byte, bufferSize)        // buffer to read data into
+	readToIndex := 0                          // keep track how much data we've read
+	request := &Request{state: isRequestLine} // initialize the request parse state
 
-	// Split the request into lines by CRLF, see RFC 9112 Section 2.1
-	messageLines := strings.Split(string(data), "\r\n")
-	// TODO: for now we only care about the first line, which should be the request line
-	requestLine, err := parseRequestLine(messageLines[0])
-	if err != nil {
-		return nil, err
+	for request.state != isDone {
+		// Grow the buffer if full
+		if readToIndex >= len(buffer) {
+			newBuffer := make([]byte, cap(buffer)*2) // double the capacity
+			copy(newBuffer, buffer)
+			buffer = newBuffer
+		}
+
+		// Read into buffer starting at readToIndex
+		bytesRead, err := reader.Read(buffer[readToIndex:])
+		if bytesRead == 0 && err != nil {
+			if err == io.EOF {
+				request.state = isDone
+				break
+			}
+			return nil, err
+		}
+		readToIndex += bytesRead
+
+		// Parse data we've read so far
+		bytesParsed, err := request.parse(buffer[:readToIndex])
+		if err != nil {
+			return nil, err
+		}
+
+		// Remove data that has been parsed to keep buffer small
+		if bytesParsed > 0 {
+			newBuffer := make([]byte, len(buffer)-bytesParsed, cap(buffer))
+			copy(newBuffer, buffer[bytesParsed:readToIndex])
+			buffer = newBuffer
+			readToIndex -= bytesParsed // not forgetting this
+		}
 	}
 
 	// Finally return the request
-	return &Request{RequestLine: requestLine}, nil
+	return request, nil
+}
+
+// parse processes the data read so far and based on the current state
+func (r *Request) parse(data []byte) (int, error) {
+	switch r.state {
+	case isDone:
+		return 0, fmt.Errorf("request is already done")
+	case isRequestLine:
+		requestLine, bytesParsed, err := parseRequestLine(data)
+		if err != nil {
+			return 0, err
+		}
+		if bytesParsed == 0 {
+			return 0, nil // not enough data to parse request line yet
+		}
+		r.RequestLine = *requestLine
+		r.state = isDone // TODO: for now we only parse request line
+		return bytesParsed, nil
+	case isHeaders:
+		return 0, fmt.Errorf("parsing headers is not implemented yet")
+	case isBody:
+		return 0, fmt.Errorf("parsing body is not implemented yet")
+	default:
+		return 0, fmt.Errorf("unknown parse state: %d", r.state)
+	}
 }
 
 // parseRequestLine parses the request line, based on RFC 9112 Section 3.
-func parseRequestLine(line string) (RequestLine, error) {
+func parseRequestLine(data []byte) (*RequestLine, int, error) {
+	// Only parse if there is CRLF in the data
+	idx := bytes.Index(data, []byte("\r\n"))
+	if idx == -1 {
+		return nil, 0, nil // no CRLF found, nothing to parse, need more data
+	}
+
 	// Split on single space, expecting three parts: method, target, and version
+	line := string(data[:idx])
 	parts := strings.Split(line, " ")
 	if len(parts) != 3 {
-		return RequestLine{}, fmt.Errorf("invalid request line: %s", line)
+		return nil, 0, fmt.Errorf("invalid request line: %s", line)
 	}
 
 	// Parse validity of each part
 	method, err := parseMethod(parts[0])
 	if err != nil {
-		return RequestLine{}, err
+		return nil, 0, err
 	}
 	target, err := parseRequestTarget(parts[1])
 	if err != nil {
-		return RequestLine{}, err
+		return nil, 0, err
 	}
 	version, err := parseHTTPVersion(parts[2])
 	if err != nil {
-		return RequestLine{}, err
+		return nil, 0, err
 	}
 
 	// Finally, return the parsed RequestLine
-	return RequestLine{
+	return &RequestLine{
 		Method:        method,
 		RequestTarget: target,
 		HTTPVersion:   version,
-	}, nil
+	}, idx + 2, nil // 2 accounting CRLF bytes
 }
 
 // parseMethod validates the HTTP method, based on RFC 9110 Section 3.1.
 func parseMethod(s string) (string, error) {
-	// TODO: only accpet any capitalized word
+	// TODO: only accept any capitalized word
 	if s == "" {
 		return "", fmt.Errorf("invalid method: %s", s)
 	}
 	for _, r := range s {
-		if !unicode.IsUpper(r) || !unicode.IsLetter(r) {
+		if !unicode.IsUpper(r) && !unicode.IsLetter(r) {
 			return "", fmt.Errorf("invalid method: %s", s)
 		}
 	}
