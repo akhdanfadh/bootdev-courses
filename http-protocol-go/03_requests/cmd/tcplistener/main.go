@@ -41,6 +41,7 @@ func main() {
 func getLinesChannel(rc io.ReadCloser) <-chan string {
 	lineChan := make(chan string)
 	go func() {
+		defer rc.Close()      // ensure the ReadCloser is closed when done
 		defer close(lineChan) // ensure channel is closed when done
 
 		var line string
@@ -49,11 +50,14 @@ func getLinesChannel(rc io.ReadCloser) <-chan string {
 			// Read file 8 bytes at a time
 			n, err := rc.Read(buf)
 			if err != nil {
+				if line != "" {
+					line = strings.TrimSuffix(line, "\r") // windows crlf case
+					lineChan <- line                      // send any remaining line to channel
+				}
 				if err == io.EOF {
 					break // end-of-file reached
-				} else {
-					log.Fatal(err)
 				}
+				log.Fatal(err)
 			}
 
 			// Split buffer into lines
