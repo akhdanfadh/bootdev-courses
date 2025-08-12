@@ -54,7 +54,9 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		bytesRead, err := reader.Read(buffer[readToIndex:])
 		if bytesRead == 0 && err != nil {
 			if err == io.EOF {
-				request.state = isDone
+				if request.state != isDone {
+					return nil, fmt.Errorf("incomplete request, currently in state: %v", request.state)
+				}
 				break
 			}
 			return nil, err
@@ -69,9 +71,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 
 		// Remove data that has been parsed to keep buffer small
 		if bytesParsed > 0 {
-			newBuffer := make([]byte, len(buffer)-bytesParsed, cap(buffer))
-			copy(newBuffer, buffer[bytesParsed:readToIndex])
-			buffer = newBuffer
+			copy(buffer, buffer[bytesParsed:])
 			readToIndex -= bytesParsed // not forgetting this
 		}
 	}
@@ -80,8 +80,30 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 	return request, nil
 }
 
-// parse processes the data read so far and based on the current state
+// parse process the data we have so far (previous data + a read from io.Reader).
 func (r *Request) parse(data []byte) (int, error) {
+	totalBytesParsed := 0
+	for r.state != isDone {
+		// - Our parsing function is designed to handle one 'line' at at time,
+		//   by checking if there is a CRLF sequence in the data.
+		// - However, there could be multiple valid parseable parts in given data,
+		//   e.g., `\r\n\r\n` just before request body.
+		// - This parts could lost if we don't parse it again, e.g., if ONLY one
+		//   parse call is done every read AND next read is EOF.
+		// - Thus we need to handle multiple parse calls gracefully here.
+		bytesParsed, err := r.parseSingle(data[totalBytesParsed:])
+		if err != nil {
+			return 0, err
+		}
+		if bytesParsed == 0 {
+			break // need more data to read
+		}
+		totalBytesParsed += bytesParsed
+	}
+	return totalBytesParsed, nil
+}
+
+func (r *Request) parseSingle(data []byte) (int, error) {
 	switch r.state {
 	case isDone:
 		return 0, fmt.Errorf("request is already done")
@@ -101,9 +123,6 @@ func (r *Request) parse(data []byte) (int, error) {
 		if err != nil {
 			return 0, err
 		}
-		if bytesParsed == 0 {
-			return 0, nil
-		} // not enough data to parse headers yet
 		if doneParsing {
 			r.state = isDone
 		} // TODO: for now we only parse request line and headers
