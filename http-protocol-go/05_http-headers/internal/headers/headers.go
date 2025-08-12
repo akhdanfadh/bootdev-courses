@@ -38,8 +38,16 @@ func (h Headers) Parse(data []byte) (int, bool, error) {
 	// value could be empty
 	value := string(bytes.TrimSpace(newData[colonIdx+1:]))
 
-	h[key] = value
+	h.Set(key, value)
 	return CLRFIdx + 2, false, nil
+}
+
+func (h Headers) Set(key, value string) {
+	if val, ok := h[key]; ok { // if key exists
+		h[key] = val + ", " + value
+	} else {
+		h[key] = value
+	}
 }
 
 var headerKeySymbols = []byte{'!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '^', '_', '`', '|', '~'}
