@@ -50,6 +50,11 @@ func (h Headers) Set(key, value string) {
 	}
 }
 
+func (h Headers) Get(key string) (string, bool) {
+	val, ok := h[strings.ToLower(key)]
+	return val, ok
+}
+
 var headerKeySymbols = []byte{'!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '^', '_', '`', '|', '~'}
 
 func parseHeaderKey(data []byte) (string, error) {

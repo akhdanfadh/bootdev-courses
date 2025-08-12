@@ -3,6 +3,7 @@ package request
 import (
 	"fmt"
 	"io"
+	"strconv"
 
 	"github.com/akhdanfadh/bootdev-courses/http-protocol-go/internal/headers"
 )
@@ -31,6 +32,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 	request := &Request{
 		state:   isRequestLine,        // initialize the request parse state
 		Headers: headers.NewHeaders(), // initialize headers
+		Body:    make([]byte, 0),      // initialize body
 	}
 	for request.state != isDone {
 		// Grow the buffer if full
@@ -114,11 +116,29 @@ func (r *Request) parseSingle(data []byte) (int, error) {
 			return 0, err
 		}
 		if doneParsing {
-			r.state = isDone
-		} // TODO: for now we only parse request line and headers
+			r.state = isBody // move to the next state
+		}
 		return bytesParsed, nil
 	case isBody:
-		return 0, fmt.Errorf("parsing body is not implemented yet")
+		// Validate content-length header
+		val, found := r.Headers.Get("content-length")
+		if !found {
+			r.state = isDone      // TODO: final state, we simply assume no body
+			return len(data), nil // report data length even since we won't parsed it
+		}
+		num, err := strconv.Atoi(val)
+		if err != nil || num < 0 {
+			return 0, fmt.Errorf("invalid content-length header: %s", val)
+		}
+		// Append data to the body
+		r.Body = append(r.Body, data...)
+		if len(r.Body) > num {
+			return 0, fmt.Errorf("body exceeds content-length: %d > %d", len(r.Body), num)
+		}
+		if len(r.Body) == num {
+			r.state = isDone // move to the final state
+		}
+		return len(data), nil
 	default:
 		return 0, fmt.Errorf("unknown parse state: %d", r.state)
 	}
