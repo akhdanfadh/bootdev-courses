@@ -31,18 +31,9 @@ func (h Headers) Parse(data []byte) (int, bool, error) {
 		return 0, false, fmt.Errorf("invalid header format: %s", newData)
 	}
 	// key is case-insensitive and no whitespace allowed before colon
-	key := strings.ToLower(string(newData[:colonIdx]))
-	if key == "" {
-		return 0, false, fmt.Errorf("invalid header key: %s", newData)
-	}
-	if key != strings.TrimRightFunc(key, unicode.IsSpace) {
-		return 0, false, fmt.Errorf("invalid header key (whitespace): %s", newData)
-	}
-	key = strings.TrimSpace(key) // trim leading whitespace
-	for _, r := range key {
-		if !isValidHeaderChar(r) {
-			return 0, false, fmt.Errorf("invalid header key (characters): %s", newData)
-		}
+	key, err := parseHeaderKey(newData[:colonIdx])
+	if err != nil {
+		return 0, false, err
 	}
 	// value could be empty
 	value := string(bytes.TrimSpace(newData[colonIdx+1:]))
@@ -51,13 +42,23 @@ func (h Headers) Parse(data []byte) (int, bool, error) {
 	return CLRFIdx + 2, false, nil
 }
 
-var validSymbol = []byte{'!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '^', '_', '`', '|', '~'}
+var headerKeySymbols = []byte{'!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '^', '_', '`', '|', '~'}
 
-func isValidHeaderChar(r rune) bool {
-	if (r >= 'A' && r <= 'Z') ||
-		(r >= 'a' && r <= 'z') ||
-		(r >= '0' && r <= '9') {
-		return true
+func parseHeaderKey(data []byte) (string, error) {
+	key := string(data)
+	if key == "" {
+		return "", fmt.Errorf("invalid empty header key")
 	}
-	return slices.Contains(validSymbol, byte(r))
+	if key != strings.TrimRightFunc(key, unicode.IsSpace) {
+		return "", fmt.Errorf("invalid whitespace in header key: '%s'", data)
+	}
+	key = strings.ToLower(strings.TrimSpace(key)) // trim leading whitespace and case-insensitive
+	for _, r := range key {
+		if (r < 'a' || r > 'z') &&
+			(r < '0' || r > '9') &&
+			!slices.Contains(headerKeySymbols, byte(r)) {
+			return "", fmt.Errorf("invalid characters in header key: '%s'", data)
+		}
+	}
+	return key, nil
 }
