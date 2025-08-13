@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-service
+spec:
+  selector:
+    app: synergychat-web # which pods to route traffic to
+  ports:
+    - protocol: TCP # allow us to use HTTP
+      port: 80 # port the service will listen on
+      targetPort: 8080 # port the pods are listening on
