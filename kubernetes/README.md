@@ -7,3 +7,4 @@ As such, you'll complete the majority of this course on your own machine. We'll 
 ## What We'll Need
 
 - The Kubernetes command-line tool, [`kubectl`](https://kubernetes.io/docs/tasks/tools/): allows us to run commands against Kubernetes clusters. It's a client that communicates with a Kubernetes API server. For Homebrew users, simply run `brew install kubectl`.
+- [Minikube](https://minikube.sigs.k8s.io/docs/), a fantastic tool that allows us to run a single-node Kubernetes cluster on our local machine. For Homebrew users, run `brew install minikube`, then start with `minikube start --extra-config "apiserver.cors-allowed-origins=["http://boot.dev"]"` to allow boot.dev to access our local cluster.
