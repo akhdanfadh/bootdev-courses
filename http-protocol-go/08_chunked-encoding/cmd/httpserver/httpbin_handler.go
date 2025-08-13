@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"log"
@@ -40,9 +41,11 @@ func httpbinHandler(w *response.Writer, req *request.Request) {
 	h.Set("Transfer-Encoding", "chunked")
 	h.Set("Connection", "close")
 	h.Set("Content-Type", "text/plain")
+	h.Set("Trailer", "X-Content-SHA256, X-Content-Length")
 	w.WriteHeaders(h)
 
 	buffer := make([]byte, chunkSize)
+	fullBody := make([]byte, 0)
 	for {
 		n, err := resp.Body.Read(buffer)
 		if n == 0 && err != nil {
@@ -56,10 +59,18 @@ func httpbinHandler(w *response.Writer, req *request.Request) {
 			log.Printf("Error writing chunked body: %v", err)
 			break
 		}
+		fullBody = append(fullBody, buffer[:n]...)
 	}
 	if _, err := w.WriteChunkedBodyDone(); err != nil {
 		log.Printf("Error writing chunked body: %v", err)
 	}
+
+	// Validate trailer
+	t := headers.NewHeaders()
+	sha256 := fmt.Sprintf("%x", sha256.Sum256(fullBody))
+	t.Set("X-Content-SHA256", sha256)
+	t.Set("X-Content-Length", fmt.Sprintf("%d", len(fullBody)))
+	w.WriteTrailer(t)
 }
 
 func httpbinHandlerError(w *response.Writer, statusCode response.StatusCode, message string) {
