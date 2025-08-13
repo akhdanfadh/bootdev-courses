@@ -6,6 +6,8 @@ import (
 	"net"
 	"strconv"
 	"sync/atomic"
+
+	"github.com/akhdanfadh/bootdev-courses/http-protocol-go/internal/response"
 )
 
 type Server struct {
@@ -49,8 +51,13 @@ func (s *Server) listen() {
 
 func (s *Server) handle(conn net.Conn) {
 	defer conn.Close() // ensure connection closed after handling
-	response := "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello World!"
-	if _, err := conn.Write([]byte(response)); err != nil {
-		log.Println("Error writing response:", err)
+	headers := response.GetDefaultHeaders(0)
+	if err := response.WriteStatusLine(conn, response.StatusOK); err != nil {
+		log.Println("Error writing status line:", err)
+		return
+	}
+	if err := response.WriteHeaders(conn, headers); err != nil {
+		log.Println("Error writing headers:", err)
+		return
 	}
 }

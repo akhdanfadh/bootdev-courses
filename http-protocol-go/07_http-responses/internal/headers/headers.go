@@ -43,6 +43,7 @@ func (h Headers) Parse(data []byte) (int, bool, error) {
 }
 
 func (h Headers) Set(key, value string) {
+	key = strings.ToLower(key) // case-insensitive
 	if val, ok := h[key]; ok { // if key exists
 		h[key] = val + ", " + value
 	} else {
