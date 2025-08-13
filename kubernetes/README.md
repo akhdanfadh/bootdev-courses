@@ -8,3 +8,11 @@ As such, you'll complete the majority of this course on your own machine. We'll 
 
 - The Kubernetes command-line tool, [`kubectl`](https://kubernetes.io/docs/tasks/tools/): allows us to run commands against Kubernetes clusters. It's a client that communicates with a Kubernetes API server. For Homebrew users, simply run `brew install kubectl`.
 - [Minikube](https://minikube.sigs.k8s.io/docs/), a fantastic tool that allows us to run a single-node Kubernetes cluster on our local machine. For Homebrew users, run `brew install minikube`, then start with `minikube start --extra-config "apiserver.cors-allowed-origins=["http://boot.dev"]"` to allow boot.dev to access our local cluster.
+
+## What We'll Do
+
+You've been hired by SynergyChat! [SynergyChat](https://github.com/bootdotdev/synergychat) is a metaverse-enabled chat app that provides data-driven insights through cutting-edge AI models that run on Web 3 infrastructure. It's truly the pinnacle of Silicon Valley innovation and culture.
+
+*All that to say, it's like Discord but with extra features for businesses.*
+
+For the rest of this course, we'll be deploying SynergyChat web services to Kubernetes!
