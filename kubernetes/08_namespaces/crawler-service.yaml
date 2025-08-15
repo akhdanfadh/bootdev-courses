@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: crawler-service
+  namespace: crawler
 spec:
   type: ClusterIP # default service type, actually no need to set here
   selector:
