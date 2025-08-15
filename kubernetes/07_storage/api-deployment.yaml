@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: synergychat-api # deployment name
+  labels:
+    app: synergychat-api # used to select the pods this deployment manages
+spec:
+  replicas: 1 # well, replicas of the pods
+  selector:
+    matchLabels:
+      app: synergychat-api # should match the above metadata label above
+  template:
+    metadata:
+      labels:
+        app: synergychat-api # again, should match
+    spec:
+      containers: # list of containers that will be deployed
+        - name: synergychat-api
+          image: bootdotdev/synergychat-api:latest
+          env:
+            - name: API_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: synergychat-api-configmap
+                  key: API_PORT

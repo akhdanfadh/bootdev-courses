@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1 # not 'v1' as ingress isn't a core kubernetes resource
+kind: Ingress
+metadata:
+  name: app-ingress
+  annotations: # where we can add extra config
+    nginx.ingress.kubernetes.io/rewrite-target: / # rewrite target URL to /
+spec:
+  rules: # where we define the routing rules
+    - host: synchat.internal # routed to web-service
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-service
+                port:
+                  number: 80
+    - host: synchatapi.internal # routed to api-service
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-service
+                port:
+                  number: 80
