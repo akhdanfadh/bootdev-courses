@@ -17,6 +17,13 @@ spec:
       containers: # list of containers that will be deployed
         - name: synergychat-api
           image: bootdotdev/synergychat-api:latest
+          volumeMounts:
+            - name: synergychat-api-volume
+              mountPath: /persist
           envFrom:
             - configMapRef:
                 name: synergychat-api-configmap
+      volumes:
+        - name: synergychat-api-volume
+          persistentVolumeClaim:
+            claimName: synergychat-api-pvc
