@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: synergychat-api-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce # read from and written to by multiple pods at the same time
+  resources:
+    requests:
+      storage: 1Gi # 1GB of storage
